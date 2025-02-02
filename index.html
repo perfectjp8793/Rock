@@ -43,6 +43,16 @@
             background-color: #e8f5e9;
             border-radius: 4px;
         }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+        .shaking {
+            animation: shake 0.5s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -65,12 +75,15 @@
     <script>
         function playGame(playerChoice) {
             document.getElementById("player-choice").innerText = `あなた: ${playerChoice}`;
-            document.getElementById("computer-choice").innerText = "考え中...";
+            let computerChoiceElement = document.getElementById("computer-choice");
+            computerChoiceElement.innerText = "考え中...";
+            computerChoiceElement.classList.add("shaking");
             
             setTimeout(() => {
                 const choices = ["グー", "チョキ", "パー"];
                 const computerChoice = choices[Math.floor(Math.random() * 3)];
-                document.getElementById("computer-choice").innerText = `コンピューター: ${computerChoice}`;
+                computerChoiceElement.innerText = `コンピューター: ${computerChoice}`;
+                computerChoiceElement.classList.remove("shaking");
                 judgeGame(playerChoice, computerChoice);
             }, 1500); // 1.5秒後にコンピューターの手を表示
         }
