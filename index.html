@@ -77,53 +77,117 @@
             <button onclick="chooseHand('パー')">パー</button>
             <p id="player1-choice"></p>
         </div>
+        <div id="player2-area" class="player-area">
+            <h3 id="player2-name"></h3>
+            <button onclick="chooseHand('グー')">グー</button>
+            <button onclick="chooseHand('チョキ')">チョキ</button>
+            <button onclick="chooseHand('パー')">パー</button>
+            <p id="player2-choice"></p>
+        </div>
         <h2 id="result"></h2>
         <button id="restartButton" style="display:none;" onclick="restartGame()">もう一回！</button>
     </div>
 
-    <script>
-        let socket;
-        let playerName = "";
+    <script type="module">
+        // Firebase SDK のインポート
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
 
-        function connectWebSocket() {
-            socket = new WebSocket("wss://your-cloudflare-worker-url/");
-            
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                
-                if (data.type === "update") {
-                    document.getElementById("status").innerText = `現在の参加者: ${data.players.join(", ")}`;
-                }
+        // Firebase の設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVb-kLNui59TYWwIiqudW0lKYlV3mrYlQ",
+            authDomain: "rock-37527.firebaseapp.com",
+            databaseURL: "https://rock-37527-default-rtdb.firebaseio.com",  // Realtime DatabaseのURL
+            projectId: "rock-37527",
+            storageBucket: "rock-37527.appspot.com",
+            messagingSenderId: "848531267491",
+            appId: "1:848531267491:web:b82aa42eb467ed04488416"
+        };
 
-                if (data.type === "start") {
-                    document.getElementById("status").innerText = `マッチング完了！ ${data.players[0]} vs ${data.players[1]}`;
-                    document.getElementById("gameArea").style.display = "block";
-                    document.getElementById("player1-name").innerText = data.players[0];
-                }
+        // Firebase を初期化
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
 
-                if (data.type === "result") {
-                    document.getElementById("result").innerText = `結果: ${data.result}`;
-                    document.getElementById("restartButton").style.display = "block";
-                }
-            };
-        }
+        let currentPlayer = null;
+        let gameRef = ref(database, 'game');
 
         function enterGame() {
-            playerName = document.getElementById("playerName").value;
-            if (playerName === "") {
+            const playerName = document.getElementById("playerName").value;
+            if (!playerName) {
                 alert("名前を入力してください");
                 return;
             }
 
-            connectWebSocket();
-            socket.onopen = () => {
-                socket.send(JSON.stringify({ type: "join", name: playerName }));
-            };
+            set(ref(database, `players/${playerName}`), {
+                choice: null
+            });
+
+            currentPlayer = playerName;
+            monitorPlayers();
+        }
+
+        function monitorPlayers() {
+            onValue(ref(database, 'players'), (snapshot) => {
+                const players = snapshot.val();
+                if (players && Object.keys(players).length === 2) {
+                    startMatch(Object.keys(players));
+                }
+            });
+        }
+
+        function startMatch(playerNames) {
+            document.getElementById("status").innerText = `マッチング完了！ ${playerNames[0]} vs ${playerNames[1]}`;
+            document.getElementById("gameArea").style.display = "block";
+            document.getElementById("player1-name").innerText = playerNames[0];
+            document.getElementById("player2-name").innerText = playerNames[1];
+
+            monitorChoices();
         }
 
         function chooseHand(hand) {
-            socket.send(JSON.stringify({ type: "choice", name: playerName, choice: hand }));
-            document.getElementById("player1-choice").innerText = `${playerName}さんは${hand}を選択！`;
+            if (!currentPlayer) return;
+            set(ref(database, `players/${currentPlayer}/choice`), hand);
+        }
+
+        function monitorChoices() {
+            onValue(ref(database, 'players'), (snapshot) => {
+                const players = snapshot.val();
+                if (players) {
+                    const playerNames = Object.keys(players);
+                    const choices = playerNames.map(name => players[name].choice);
+
+                    if (choices.every(choice => choice !== null)) {
+                        judgeGame(playerNames, choices);
+                    }
+                }
+            });
+        }
+
+        function judgeGame(playerNames, choices) {
+            let result;
+            if (choices[0] === choices[1]) {
+                result = "引き分け！";
+            } else if (
+                (choices[0] === "グー" && choices[1] === "チョキ") ||
+                (choices[0] === "チョキ" && choices[1] === "パー") ||
+                (choices[0] === "パー" && choices[1] === "グー")
+            ) {
+                result = `${playerNames[0]} さんの勝ち！`;
+            } else {
+                result = `${playerNames[1]} さんの勝ち！`;
+            }
+
+            document.getElementById("result").innerText = `結果: ${result}`;
+            document.getElementById("restartButton").style.display = "block";
+        }
+
+        function restartGame() {
+            remove(ref(database, 'players'));
+            document.getElementById("playerName").value = "";
+            document.getElementById("status").innerText = "現在の参加者: なし";
+            document.getElementById("gameArea").style.display = "none";
+            document.getElementById("result").innerText = "";
+            document.getElementById("restartButton").style.display = "none";
         }
     </script>
 </body>
