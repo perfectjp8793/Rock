@@ -57,7 +57,7 @@
     </div>
     <div class="player-area">
         <h3>コンピューターの手</h3>
-        <p id="computer-choice"></p>
+        <p id="computer-choice">？？？</p>
     </div>
     <h2 id="result"></h2>
     <button onclick="restartGame()" style="display:none;">もう一回！</button>
@@ -65,10 +65,17 @@
     <script>
         function playGame(playerChoice) {
             document.getElementById("player-choice").innerText = `あなた: ${playerChoice}`;
-            const choices = ["グー", "チョキ", "パー"];
-            const computerChoice = choices[Math.floor(Math.random() * 3)];
-            document.getElementById("computer-choice").innerText = `コンピューター: ${computerChoice}`;
+            document.getElementById("computer-choice").innerText = "考え中...";
             
+            setTimeout(() => {
+                const choices = ["グー", "チョキ", "パー"];
+                const computerChoice = choices[Math.floor(Math.random() * 3)];
+                document.getElementById("computer-choice").innerText = `コンピューター: ${computerChoice}`;
+                judgeGame(playerChoice, computerChoice);
+            }, 1500); // 1.5秒後にコンピューターの手を表示
+        }
+
+        function judgeGame(playerChoice, computerChoice) {
             let result;
             if (playerChoice === computerChoice) {
                 result = "引き分け！";
@@ -87,7 +94,7 @@
 
         function restartGame() {
             document.getElementById("player-choice").innerText = "";
-            document.getElementById("computer-choice").innerText = "";
+            document.getElementById("computer-choice").innerText = "？？？";
             document.getElementById("result").innerText = "";
             document.querySelector("button[onclick='restartGame()']").style.display = "none";
         }
