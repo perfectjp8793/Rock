@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ジャンケン対戦マッチング</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .player-area {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #result {
+            font-size: 24px;
+            color: #2c3e50;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border-radius: 4px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        #restartButton {
+            background-color: #2196F3;
+        }
+        #restartButton:hover {
+            background-color: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <h1>ジャンケン対戦マッチング</h1>
+    <input type="text" id="playerName" placeholder="名前を入力">
+    <button onclick="enterGame()">エントリー</button>
+    <p id="status">現在の参加者: なし</p>
+
+    <div id="gameArea" style="display:none;">
+        <h2>ジャンケンを選ぼう！</h2>
+        <div id="player1-area" class="player-area">
+            <h3 id="player1-name"></h3>
+            <button onclick="chooseHand(players[0], 'グー')">グー</button>
+            <button onclick="chooseHand(players[0], 'チョキ')">チョキ</button>
+            <button onclick="chooseHand(players[0], 'パー')">パー</button>
+            <p id="player1-choice"></p>
+        </div>
+        <div id="player2-area" class="player-area">
+            <h3 id="player2-name"></h3>
+            <button onclick="chooseHand(players[1], 'グー')">グー</button>
+            <button onclick="chooseHand(players[1], 'チョキ')">チョキ</button>
+            <button onclick="chooseHand(players[1], 'パー')">パー</button>
+            <p id="player2-choice"></p>
+        </div>
+        <h2 id="result"></h2>
+        <button id="restartButton" style="display:none;" onclick="restartGame()">もう一回！</button>
+    </div>
+
+    <script>
+        let players = [];
+        let choices = {};
+
+        function enterGame() {
+            const playerName = document.getElementById("playerName").value;
+            if (playerName === "") {
+                alert("名前を入力してください");
+                return;
+            }
+
+            if (players.includes(playerName)) {
+                alert("同じ名前は使えません");
+                return;
+            }
+
+            players.push(playerName);
+            document.getElementById("status").innerText = `現在の参加者: ${players.join(", ")}`;
+
+            if (players.length === 2) {
+                startMatch();
+            }
+        }
+
+        function startMatch() {
+            document.getElementById("status").innerText = `マッチング完了！ ${players[0]} vs ${players[1]}`;
+            document.getElementById("gameArea").style.display = "block";
+            document.getElementById("player1-name").innerText = players[0];
+            document.getElementById("player2-name").innerText = players[1];
+        }
+
+        function chooseHand(player, hand) {
+            choices[player] = hand;
+            const playerIndex = players.indexOf(player) + 1;
+            document.getElementById(`player${playerIndex}-choice`).innerText = `${player}さんは${hand}を選択！`;
+
+            if (Object.keys(choices).length === 2) {
+                judgeGame();
+            }
+        }
+
+        function judgeGame() {
+            const [p1, p2] = players;
+            const hand1 = choices[p1];
+            const hand2 = choices[p2];
+
+            let result;
+            
+            if (hand1 === hand2) {
+                result = "引き分け！";
+            } else if (
+                (hand1 === "グー" && hand2 === "チョキ") ||
+                (hand1 === "チョキ" && hand2 === "パー") ||
+                (hand1 === "パー" && hand2 === "グー")
+            ) {
+                result = `${p1}さんの勝ち！`;
+            } else {
+                result = `${p2}さんの勝ち！`;
+            }
+
+            document.getElementById("result").innerText = `結果: ${result}`;
+            document.getElementById("restartButton").style.display = "block";
+        }
+
+        function restartGame() {
+            players = [];
+            choices = {};
+            document.getElementById("playerName").value = "";
+            document.getElementById("status").innerText = "現在の参加者: なし";
+            document.getElementById("gameArea").style.display = "none";
+            document.getElementById("result").innerText = "";
+            document.getElementById("restartButton").style.display = "none";
+            document.getElementById("player1-choice").innerText = "";
+            document.getElementById("player2-choice").innerText = "";
+        }
+    </script>
+</body>
+</html>
