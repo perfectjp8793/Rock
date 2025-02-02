@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ジャンケン対戦マッチング</title>
+    <title>ジャンケン対戦</title>
     <style>
         body {
             font-family: sans-serif;
@@ -43,151 +43,53 @@
             background-color: #e8f5e9;
             border-radius: 4px;
         }
-        input[type="text"] {
-            padding: 8px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-right: 10px;
-        }
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 30px;
-        }
-        #restartButton {
-            background-color: #2196F3;
-        }
-        #restartButton:hover {
-            background-color: #1976D2;
-        }
     </style>
 </head>
 <body>
-    <h1>ジャンケン対戦マッチング</h1>
-    <input type="text" id="playerName" placeholder="名前を入力">
-    <button onclick="enterGame()">エントリー</button>
-    <p id="status">現在の参加者: なし</p>
-
-    <div id="gameArea" style="display:none;">
-        <h2>ジャンケンを選ぼう！</h2>
-        <div id="player1-area" class="player-area">
-            <h3 id="player1-name"></h3>
-            <button onclick="chooseHand('グー')">グー</button>
-            <button onclick="chooseHand('チョキ')">チョキ</button>
-            <button onclick="chooseHand('パー')">パー</button>
-            <p id="player1-choice"></p>
-        </div>
-        <div id="player2-area" class="player-area">
-            <h3 id="player2-name"></h3>
-            <button onclick="chooseHand('グー')">グー</button>
-            <button onclick="chooseHand('チョキ')">チョキ</button>
-            <button onclick="chooseHand('パー')">パー</button>
-            <p id="player2-choice"></p>
-        </div>
-        <h2 id="result"></h2>
-        <button id="restartButton" style="display:none;" onclick="restartGame()">もう一回！</button>
+    <h1>ジャンケン対戦</h1>
+    <h2>ジャンケンを選ぼう！</h2>
+    <div class="player-area">
+        <h3>あなたの手</h3>
+        <button onclick="playGame('グー')">グー</button>
+        <button onclick="playGame('チョキ')">チョキ</button>
+        <button onclick="playGame('パー')">パー</button>
+        <p id="player-choice"></p>
     </div>
+    <div class="player-area">
+        <h3>コンピューターの手</h3>
+        <p id="computer-choice"></p>
+    </div>
+    <h2 id="result"></h2>
+    <button onclick="restartGame()" style="display:none;">もう一回！</button>
 
-    <script type="module">
-        // Firebase SDK のインポート
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
-
-        // Firebase の設定
-        const firebaseConfig = {
-            apiKey: "AIzaSyCVb-kLNui59TYWwIiqudW0lKYlV3mrYlQ",
-            authDomain: "rock-37527.firebaseapp.com",
-            databaseURL: "https://rock-37527-default-rtdb.firebaseio.com",  // Realtime DatabaseのURL
-            projectId: "rock-37527",
-            storageBucket: "rock-37527.appspot.com",
-            messagingSenderId: "848531267491",
-            appId: "1:848531267491:web:b82aa42eb467ed04488416"
-        };
-
-        // Firebase を初期化
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-
-        let currentPlayer = null;
-        let gameRef = ref(database, 'game');
-
-        function enterGame() {
-            const playerName = document.getElementById("playerName").value;
-            if (!playerName) {
-                alert("名前を入力してください");
-                return;
-            }
-
-            set(ref(database, `players/${playerName}`), {
-                choice: null
-            });
-
-            currentPlayer = playerName;
-            monitorPlayers();
-        }
-
-        function monitorPlayers() {
-            onValue(ref(database, 'players'), (snapshot) => {
-                const players = snapshot.val();
-                if (players && Object.keys(players).length === 2) {
-                    startMatch(Object.keys(players));
-                }
-            });
-        }
-
-        function startMatch(playerNames) {
-            document.getElementById("status").innerText = `マッチング完了！ ${playerNames[0]} vs ${playerNames[1]}`;
-            document.getElementById("gameArea").style.display = "block";
-            document.getElementById("player1-name").innerText = playerNames[0];
-            document.getElementById("player2-name").innerText = playerNames[1];
-
-            monitorChoices();
-        }
-
-        function chooseHand(hand) {
-            if (!currentPlayer) return;
-            set(ref(database, `players/${currentPlayer}/choice`), hand);
-        }
-
-        function monitorChoices() {
-            onValue(ref(database, 'players'), (snapshot) => {
-                const players = snapshot.val();
-                if (players) {
-                    const playerNames = Object.keys(players);
-                    const choices = playerNames.map(name => players[name].choice);
-
-                    if (choices.every(choice => choice !== null)) {
-                        judgeGame(playerNames, choices);
-                    }
-                }
-            });
-        }
-
-        function judgeGame(playerNames, choices) {
+    <script>
+        function playGame(playerChoice) {
+            document.getElementById("player-choice").innerText = `あなた: ${playerChoice}`;
+            const choices = ["グー", "チョキ", "パー"];
+            const computerChoice = choices[Math.floor(Math.random() * 3)];
+            document.getElementById("computer-choice").innerText = `コンピューター: ${computerChoice}`;
+            
             let result;
-            if (choices[0] === choices[1]) {
+            if (playerChoice === computerChoice) {
                 result = "引き分け！";
             } else if (
-                (choices[0] === "グー" && choices[1] === "チョキ") ||
-                (choices[0] === "チョキ" && choices[1] === "パー") ||
-                (choices[0] === "パー" && choices[1] === "グー")
+                (playerChoice === "グー" && computerChoice === "チョキ") ||
+                (playerChoice === "チョキ" && computerChoice === "パー") ||
+                (playerChoice === "パー" && computerChoice === "グー")
             ) {
-                result = `${playerNames[0]} さんの勝ち！`;
+                result = "あなたの勝ち！";
             } else {
-                result = `${playerNames[1]} さんの勝ち！`;
+                result = "コンピューターの勝ち！";
             }
-
-            document.getElementById("result").innerText = `結果: ${result}`;
-            document.getElementById("restartButton").style.display = "block";
+            document.getElementById("result").innerText = result;
+            document.querySelector("button[onclick='restartGame()']").style.display = "block";
         }
 
         function restartGame() {
-            remove(ref(database, 'players'));
-            document.getElementById("playerName").value = "";
-            document.getElementById("status").innerText = "現在の参加者: なし";
-            document.getElementById("gameArea").style.display = "none";
+            document.getElementById("player-choice").innerText = "";
+            document.getElementById("computer-choice").innerText = "";
             document.getElementById("result").innerText = "";
-            document.getElementById("restartButton").style.display = "none";
+            document.querySelector("button[onclick='restartGame()']").style.display = "none";
         }
     </script>
 </body>
