@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ジャンケン対戦マッチング</title>
+    <script>
+        let players = [];
+
+        function enterGame() {
+            const playerName = document.getElementById("playerName").value;
+            if (playerName === "") {
+                alert("名前を入力してください");
+                return;
+            }
+            
+            players.push(playerName);
+            document.getElementById("status").innerText = `現在の参加者: ${players.join(", ")}`;
+            
+            if (players.length === 2) {
+                startMatch();
+            }
+        }
+
+        function startMatch() {
+            document.getElementById("status").innerText = `マッチング完了！ ${players[0]} vs ${players[1]}`;
+            document.getElementById("startButton").style.display = "block";
+        }
+    </script>
+</head>
+<body>
+    <h1>ジャンケン対戦マッチング</h1>
+    <input type="text" id="playerName" placeholder="名前を入力">
+    <button onclick="enterGame()">エントリー</button>
+    <p id="status">現在の参加者: なし</p>
+    <button id="startButton" style="display:none;" onclick="alert('対戦開始！')">対戦開始</button>
+</body>
+</html>
