@@ -11,6 +11,66 @@
             margin: 0 auto;
             padding: 20px;
             text-align: center;
+            background-color: #f0f0f0;
+        }
+        @keyframes resultPopup {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes winningEffect {
+            0% { background-color: #fff; }
+            50% { background-color: #ffeb3b; }
+            100% { background-color: #fff; }
+        }
+        @keyframes shakeDraw {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        #result {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 15px;
+            animation: resultPopup 0.5s ease-out;
+            display: none;
+        }
+        #result.show {
+            display: block;
+        }
+        #result.win {
+            color: #ff4081;
+            background: linear-gradient(45deg, #fff9c4, #fff);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            animation: resultPopup 0.5s ease-out, winningEffect 2s infinite;
+        }
+        #result.lose {
+            color: #2196f3;
+            background: linear-gradient(45deg, #e3f2fd, #fff);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        #result.draw {
+            color: #4caf50;
+            background: linear-gradient(45deg, #f1f8e9, #fff);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            animation: resultPopup 0.5s ease-out, shakeDraw 0.5s ease-in-out;
+        }
+        .hand-emoji {
+            font-size: 3em;
+            margin: 0 10px;
+            animation: resultPopup 0.3s ease-out;
+        }
+        #vsDisplay {
+            font-size: 2em;
+            color: #ff5722;
+            margin: 10px;
+            display: none;
+        }
+        #vsDisplay.show {
+            display: block;
+            animation: resultPopup 0.3s ease-out;
         }
         button {
             margin: 10px;
@@ -61,14 +121,15 @@
 
     <div id="gameButtons" class="game-buttons">
         <h2>あなたの手を選ぶ</h2>
-        <button id="rockBtn">グー</button>
-        <button id="scissorsBtn">チョキ</button>
-        <button id="paperBtn">パー</button>
+        <button id="rockBtn">👊 グー</button>
+        <button id="scissorsBtn">✌️ チョキ</button>
+        <button id="paperBtn">🖐 パー</button>
     </div>
 
-    <h2 id="result"></h2>
+    <div id="vsDisplay"></div>
+    <div id="result"></div>
     <div id="nextGameInfo">
-        <p>次のゲームの準備ができました！</p>
+        <p>🎮 次のゲームの準備ができました！</p>
         <p>グー・チョキ・パーを選んでください</p>
     </div>
 
@@ -210,23 +271,53 @@
             }
         }
 
+        function getHandEmoji(hand) {
+            switch(hand) {
+                case 'グー': return '👊';
+                case 'チョキ': return '✌️';
+                case 'パー': return '🖐';
+                default: return '';
+            }
+        }
+
+        function showVsDisplay(player1Hand, player2Hand) {
+            const vsDisplay = document.getElementById('vsDisplay');
+            vsDisplay.innerHTML = `
+                <span class="hand-emoji">${getHandEmoji(player1Hand)}</span>
+                <span style="color: #ff5722; font-weight: bold;">VS</span>
+                <span class="hand-emoji">${getHandEmoji(player2Hand)}</span>
+            `;
+            vsDisplay.classList.add('show');
+        }
+
         function checkResult(roomData) {
             if (!roomData.player1Hand || !roomData.player2Hand) return;
 
+            const resultDiv = document.getElementById("result");
             let result = "";
+            let resultClass = "";
+
+            showVsDisplay(roomData.player1Hand, roomData.player2Hand);
+
             if (roomData.player1Hand === roomData.player2Hand) {
-                result = "引き分け！";
+                result = "👔 引き分け！";
+                resultClass = "draw";
             } else if (
                 (roomData.player1Hand === "グー" && roomData.player2Hand === "チョキ") ||
                 (roomData.player1Hand === "チョキ" && roomData.player2Hand === "パー") ||
                 (roomData.player1Hand === "パー" && roomData.player2Hand === "グー")
             ) {
-                result = roomData.player1 === playerId ? "あなたの勝ち！" : "相手の勝ち！";
+                result = roomData.player1 === playerId ? "🎊 あなたの勝ち！ 🎊" : "😅 相手の勝ち！";
+                resultClass = roomData.player1 === playerId ? "win" : "lose";
             } else {
-                result = roomData.player2 === playerId ? "あなたの勝ち！" : "相手の勝ち！";
+                result = roomData.player2 === playerId ? "🎊 あなたの勝ち！ 🎊" : "😅 相手の勝ち！";
+                resultClass = roomData.player2 === playerId ? "win" : "lose";
             }
 
-            document.getElementById("result").innerText = result;
+            resultDiv.innerText = result;
+            resultDiv.className = ""; // リセット
+            void resultDiv.offsetWidth; // アニメーションのリセット
+            resultDiv.classList.add(resultClass, "show");
 
             setTimeout(async () => {
                 try {
