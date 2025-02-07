@@ -103,12 +103,28 @@
         initializeFirebase();
 
         let roomId = null;
-        let playerId = Math.random().toString(36).substring(2, 10);
+        // 4桁の数字でIDを生成
+function generateShortId() {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+let playerId = generateShortId();
         let unsubscribe = null;
 
         async function createRoom() {
             try {
-                const roomRef = await addDoc(collection(db, "rooms"), {
+                // 短いルームIDを生成
+                const newRoomId = generateShortId();
+                const roomRef = doc(db, "rooms", newRoomId);
+                
+                // ルームが既に存在しないか確認
+                const roomSnap = await getDoc(roomRef);
+                if (roomSnap.exists()) {
+                    throw new Error("ルームIDが重複しています。もう一度お試しください。");
+                }
+                
+                // ルームを作成
+                await setDoc(roomRef, {
                     player1: playerId,
                     player2: null,
                     player1Hand: null,
@@ -220,11 +236,27 @@
         }
 
         // イベントリスナーの設定
-        document.getElementById("createRoomBtn").addEventListener("click", createRoom);
-        document.getElementById("joinRoomBtn").addEventListener("click", joinRoom);
-        document.getElementById("rockBtn").addEventListener("click", () => playGame('グー'));
-        document.getElementById("scissorsBtn").addEventListener("click", () => playGame('チョキ'));
-        document.getElementById("paperBtn").addEventListener("click", () => playGame('パー'));
+        function setupEventListeners(firebase) {
+            document.getElementById("createRoomBtn").addEventListener("click", async () => {
+                if (!isFirebaseInitialized) {
+                    alert("アプリケーションの初期化中です。しばらくお待ちください。");
+                    return;
+                }
+                await createRoom(firebase);
+            });
+            
+            document.getElementById("joinRoomBtn").addEventListener("click", async () => {
+                if (!isFirebaseInitialized) {
+                    alert("アプリケーションの初期化中です。しばらくお待ちください。");
+                    return;
+                }
+                await joinRoom(firebase);
+            });
+            
+            document.getElementById("rockBtn").addEventListener("click", () => playGame('グー'));
+            document.getElementById("scissorsBtn").addEventListener("click", () => playGame('チョキ'));
+            document.getElementById("paperBtn").addEventListener("click", () => playGame('パー'));
+        }
     </script>
 </body>
 </html>
