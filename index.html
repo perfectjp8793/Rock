@@ -19,16 +19,15 @@
     <h2 id="result"></h2>
 
     <script type="module">
-        // ✅ 正しいFirebaseの読み込み
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-        // ✅ Firebaseの設定（あなたの設定を使用）
+        // ✅ Firebaseの設定
         const firebaseConfig = {
             apiKey: "AIzaSyDz7bUkG8_thmFr4Alot_FXyxl8dex0B18",
             authDomain: "jankenonline-270a1.firebaseapp.com",
             projectId: "jankenonline-270a1",
-            storageBucket: "jankenonline-270a1.appspot.com",  // 修正
+            storageBucket: "jankenonline-270a1.appspot.com", // 修正
             messagingSenderId: "573769462418",
             appId: "1:573769462418:web:4ad6efd0fac2af48deec4b"
         };
@@ -119,7 +118,7 @@
             }
         }
 
-        // ✅ ボタンに関数を紐付ける（ボタンが押せない問題を解決！）
+        // ✅ ボタンに関数を紐付ける（エラーを防ぐため！）
         document.getElementById("createRoomBtn").addEventListener("click", createRoom);
         document.getElementById("joinRoomBtn").addEventListener("click", joinRoom);
         document.getElementById("rockBtn").addEventListener("click", () => playGame('グー'));
