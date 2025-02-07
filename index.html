@@ -282,10 +282,23 @@
 
         function showVsDisplay(player1Hand, player2Hand) {
             const vsDisplay = document.getElementById('vsDisplay');
+            const isPlayer1 = playerId === roomData.player1;
+            
+            const myHand = isPlayer1 ? player1Hand : player2Hand;
+            const opponentHand = isPlayer1 ? player2Hand : player1Hand;
+            
             vsDisplay.innerHTML = `
-                <span class="hand-emoji">${getHandEmoji(player1Hand)}</span>
+                <div class="player-hand me">
+                    <div class="player-label">自分の手</div>
+                    <span class="hand-emoji">${getHandEmoji(myHand)}</span>
+                    <div>${myHand}</div>
+                </div>
                 <span style="color: #ff5722; font-weight: bold;">VS</span>
-                <span class="hand-emoji">${getHandEmoji(player2Hand)}</span>
+                <div class="player-hand opponent">
+                    <div class="player-label">相手の手</div>
+                    <span class="hand-emoji">${getHandEmoji(opponentHand)}</span>
+                    <div>${opponentHand}</div>
+                </div>
             `;
             vsDisplay.classList.add('show');
         }
