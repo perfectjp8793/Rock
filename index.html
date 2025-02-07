@@ -4,121 +4,187 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>オンラインジャンケン</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #roomInfo {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+        .game-buttons {
+            display: none;
+        }
+        .game-buttons.active {
+            display: block;
+        }
+    </style>
 </head>
 <body>
     <h1>オンラインジャンケン</h1>
 
-    <button id="createRoomBtn">ルームを作る</button>
-    <button id="joinRoomBtn">ルームに参加</button>
+    <div id="roomControls">
+        <button id="createRoomBtn">ルームを作る</button>
+        <button id="joinRoomBtn">ルームに参加</button>
+    </div>
 
-    <h2>あなたの手を選ぶ</h2>
-    <button id="rockBtn">グー</button>
-    <button id="scissorsBtn">チョキ</button>
-    <button id="paperBtn">パー</button>
+    <div id="roomInfo"></div>
+
+    <div id="gameButtons" class="game-buttons">
+        <h2>あなたの手を選ぶ</h2>
+        <button id="rockBtn">グー</button>
+        <button id="scissorsBtn">チョキ</button>
+        <button id="paperBtn">パー</button>
+    </div>
 
     <h2 id="result"></h2>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-        // ✅ Firebaseの設定
         const firebaseConfig = {
             apiKey: "AIzaSyDz7bUkG8_thmFr4Alot_FXyxl8dex0B18",
             authDomain: "jankenonline-270a1.firebaseapp.com",
             projectId: "jankenonline-270a1",
-            storageBucket: "jankenonline-270a1.appspot.com", // 修正
+            storageBucket: "jankenonline-270a1.appspot.com",
             messagingSenderId: "573769462418",
             appId: "1:573769462418:web:4ad6efd0fac2af48deec4b"
         };
 
-        // ✅ Firebaseを初期化
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         let roomId = null;
-        let playerId = Math.random().toString(36).substring(2, 10); // ランダムなID
+        let playerId = Math.random().toString(36).substring(2, 10);
+        let unsubscribe = null;
 
-        // ✅ ルームを作成する
         async function createRoom() {
-            const roomRef = await addDoc(collection(db, "rooms"), {
-                player1: playerId,
-                player2: null,
-                player1Hand: null,
-                player2Hand: null
-            });
-            roomId = roomRef.id;
-            alert(`ルーム作成！ID: ${roomId}`);
-        }
-
-        // ✅ ルームに参加する
-        async function joinRoom() {
-            const inputId = prompt("参加するルームIDを入力:");
-            const roomRef = doc(db, "rooms", inputId);
-            const roomSnap = await getDoc(roomRef);
-
-            if (roomSnap.exists()) {
-                const roomData = roomSnap.data();
-                if (!roomData.player2) {
-                    await setDoc(roomRef, { player2: playerId }, { merge: true });
-                    roomId = inputId;
-                    alert("ルームに参加しました！");
-                } else {
-                    alert("満員です！");
-                }
-            } else {
-                alert("ルームが見つかりません！");
+            try {
+                const roomRef = await addDoc(collection(db, "rooms"), {
+                    player1: playerId,
+                    player2: null,
+                    player1Hand: null,
+                    player2Hand: null,
+                    createdAt: new Date().toISOString()
+                });
+                roomId = roomRef.id;
+                document.getElementById('roomInfo').innerText = `ルームID: ${roomId}`;
+                document.getElementById('gameButtons').classList.add('active');
+                subscribeToRoom(roomId);
+                alert(`ルーム作成成功！\nルームID: ${roomId}`);
+            } catch (error) {
+                console.error("ルーム作成エラー:", error);
+                alert("ルーム作成に失敗しました。もう一度お試しください。");
             }
         }
 
-        // ✅ ジャンケンの手を出す
+        async function joinRoom() {
+            try {
+                const inputId = prompt("参加するルームIDを入力してください:");
+                if (!inputId) return;
+
+                const roomRef = doc(db, "rooms", inputId);
+                const roomSnap = await getDoc(roomRef);
+
+                if (roomSnap.exists()) {
+                    const roomData = roomSnap.data();
+                    if (!roomData.player2) {
+                        await setDoc(roomRef, { player2: playerId }, { merge: true });
+                        roomId = inputId;
+                        document.getElementById('roomInfo').innerText = `ルームID: ${roomId}`;
+                        document.getElementById('gameButtons').classList.add('active');
+                        subscribeToRoom(roomId);
+                        alert("ルームへの参加が完了しました！");
+                    } else {
+                        alert("このルームは満員です。");
+                    }
+                } else {
+                    alert("指定されたルームが見つかりません。");
+                }
+            } catch (error) {
+                console.error("ルーム参加エラー:", error);
+                alert("ルームへの参加に失敗しました。もう一度お試しください。");
+            }
+        }
+
+        function subscribeToRoom(roomId) {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+            
+            unsubscribe = onSnapshot(doc(db, "rooms", roomId), (doc) => {
+                if (doc.exists()) {
+                    const roomData = doc.data();
+                    checkResult(roomData);
+                }
+            });
+        }
+
         async function playGame(hand) {
             if (!roomId) {
-                alert("ルームに入っていません！");
+                alert("先にルームに参加してください！");
                 return;
             }
 
-            const roomRef = doc(db, "rooms", roomId);
-            const roomSnap = await getDoc(roomRef);
-            const roomData = roomSnap.data();
+            try {
+                const roomRef = doc(db, "rooms", roomId);
+                const roomSnap = await getDoc(roomRef);
+                const roomData = roomSnap.data();
 
-            if (roomData.player1 === playerId) {
-                await setDoc(roomRef, { player1Hand: hand }, { merge: true });
-            } else if (roomData.player2 === playerId) {
-                await setDoc(roomRef, { player2Hand: hand }, { merge: true });
-            }
-
-            checkResult();
-        }
-
-        // ✅ 勝敗判定
-        async function checkResult() {
-            const roomRef = doc(db, "rooms", roomId);
-            const roomSnap = await getDoc(roomRef);
-            const roomData = roomSnap.data();
-
-            if (roomData.player1Hand && roomData.player2Hand) {
-                let result = "";
-                if (roomData.player1Hand === roomData.player2Hand) {
-                    result = "引き分け！";
-                } else if (
-                    (roomData.player1Hand === "グー" && roomData.player2Hand === "チョキ") ||
-                    (roomData.player1Hand === "チョキ" && roomData.player2Hand === "パー") ||
-                    (roomData.player1Hand === "パー" && roomData.player2Hand === "グー")
-                ) {
-                    result = roomData.player1 === playerId ? "あなたの勝ち！" : "相手の勝ち！";
-                } else {
-                    result = roomData.player2 === playerId ? "あなたの勝ち！" : "相手の勝ち！";
+                if (roomData.player1 === playerId) {
+                    await setDoc(roomRef, { player1Hand: hand }, { merge: true });
+                } else if (roomData.player2 === playerId) {
+                    await setDoc(roomRef, { player2Hand: hand }, { merge: true });
                 }
-
-                document.getElementById("result").innerText = result;
-
-                // **リセット**
-                await setDoc(roomRef, { player1Hand: null, player2Hand: null }, { merge: true });
+            } catch (error) {
+                console.error("プレイエラー:", error);
+                alert("手の選択に失敗しました。もう一度お試しください。");
             }
         }
 
-        // ✅ ボタンに関数を紐付ける（エラーを防ぐため！）
+        function checkResult(roomData) {
+            if (!roomData.player1Hand || !roomData.player2Hand) return;
+
+            let result = "";
+            if (roomData.player1Hand === roomData.player2Hand) {
+                result = "引き分け！";
+            } else if (
+                (roomData.player1Hand === "グー" && roomData.player2Hand === "チョキ") ||
+                (roomData.player1Hand === "チョキ" && roomData.player2Hand === "パー") ||
+                (roomData.player1Hand === "パー" && roomData.player2Hand === "グー")
+            ) {
+                result = roomData.player1 === playerId ? "あなたの勝ち！" : "相手の勝ち！";
+            } else {
+                result = roomData.player2 === playerId ? "あなたの勝ち！" : "相手の勝ち！";
+            }
+
+            document.getElementById("result").innerText = result;
+
+            // 結果表示後、手をリセット
+            setTimeout(async () => {
+                try {
+                    const roomRef = doc(db, "rooms", roomId);
+                    await setDoc(roomRef, { player1Hand: null, player2Hand: null }, { merge: true });
+                } catch (error) {
+                    console.error("リセットエラー:", error);
+                }
+            }, 2000);
+        }
+
+        // イベントリスナーの設定
         document.getElementById("createRoomBtn").addEventListener("click", createRoom);
         document.getElementById("joinRoomBtn").addEventListener("click", joinRoom);
         document.getElementById("rockBtn").addEventListener("click", () => playGame('グー'));
