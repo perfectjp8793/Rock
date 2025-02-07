@@ -8,40 +8,39 @@
 <body>
     <h1>オンラインジャンケン</h1>
 
-    <button onclick="createRoom()">ルームを作る</button>
-    <button onclick="joinRoom()">ルームに参加</button>
+    <button id="createRoomBtn">ルームを作る</button>
+    <button id="joinRoomBtn">ルームに参加</button>
 
     <h2>あなたの手を選ぶ</h2>
-    <button onclick="playGame('グー')">グー</button>
-    <button onclick="playGame('チョキ')">チョキ</button>
-    <button onclick="playGame('パー')">パー</button>
+    <button id="rockBtn">グー</button>
+    <button id="scissorsBtn">チョキ</button>
+    <button id="paperBtn">パー</button>
 
     <h2 id="result"></h2>
 
     <script type="module">
-        // **Firebaseを読み込む**
+        // ✅ 正しいFirebaseの読み込み
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-        // **🔥 Firebaseの設定（ここに自分の情報を入れる）**
+        // ✅ Firebaseの設定（あなたの設定を使用）
         const firebaseConfig = {
             apiKey: "AIzaSyDz7bUkG8_thmFr4Alot_FXyxl8dex0B18",
             authDomain: "jankenonline-270a1.firebaseapp.com",
             projectId: "jankenonline-270a1",
-            storageBucket: "jankenonline-270a1.firebasestorage.app",
+            storageBucket: "jankenonline-270a1.appspot.com",  // 修正
             messagingSenderId: "573769462418",
             appId: "1:573769462418:web:4ad6efd0fac2af48deec4b"
         };
 
-        // **Firebaseを初期化**
+        // ✅ Firebaseを初期化
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // **変数**
         let roomId = null;
         let playerId = Math.random().toString(36).substring(2, 10); // ランダムなID
 
-        // **ルームを作る**
+        // ✅ ルームを作成する
         async function createRoom() {
             const roomRef = await addDoc(collection(db, "rooms"), {
                 player1: playerId,
@@ -53,7 +52,7 @@
             alert(`ルーム作成！ID: ${roomId}`);
         }
 
-        // **ルームに参加する**
+        // ✅ ルームに参加する
         async function joinRoom() {
             const inputId = prompt("参加するルームIDを入力:");
             const roomRef = doc(db, "rooms", inputId);
@@ -73,7 +72,7 @@
             }
         }
 
-        // **ジャンケンの手を出す**
+        // ✅ ジャンケンの手を出す
         async function playGame(hand) {
             if (!roomId) {
                 alert("ルームに入っていません！");
@@ -93,7 +92,7 @@
             checkResult();
         }
 
-        // **勝敗判定**
+        // ✅ 勝敗判定
         async function checkResult() {
             const roomRef = doc(db, "rooms", roomId);
             const roomSnap = await getDoc(roomRef);
@@ -120,17 +119,12 @@
             }
         }
 
-        // **リアルタイムで相手の手を監視**
-        function watchGame() {
-            if (!roomId) return;
-
-            const roomRef = doc(db, "rooms", roomId);
-            onSnapshot(roomRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    checkResult();
-                }
-            });
-        }
+        // ✅ ボタンに関数を紐付ける（ボタンが押せない問題を解決！）
+        document.getElementById("createRoomBtn").addEventListener("click", createRoom);
+        document.getElementById("joinRoomBtn").addEventListener("click", joinRoom);
+        document.getElementById("rockBtn").addEventListener("click", () => playGame('グー'));
+        document.getElementById("scissorsBtn").addEventListener("click", () => playGame('チョキ'));
+        document.getElementById("paperBtn").addEventListener("click", () => playGame('パー'));
     </script>
 </body>
 </html>
