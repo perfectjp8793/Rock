@@ -247,15 +247,15 @@
                 return;
             }
 
-            // すべての手のボタンを無効化
-            document.querySelectorAll('#gameButtons button').forEach(btn => {
-                btn.disabled = true;
-            });
-            
-            // 選択したボタンをハイライト
-            buttonElement.classList.add('hand-selected');
-
             try {
+                // すべての手のボタンを無効化
+                document.querySelectorAll('#gameButtons button').forEach(btn => {
+                    btn.disabled = true;
+                });
+                
+                // 選択したボタンをハイライト
+                buttonElement.classList.add('hand-selected');
+
                 const roomRef = firebaseModules.doc(db, "rooms", roomId);
                 const roomSnap = await firebaseModules.getDoc(roomRef);
                 const roomData = roomSnap.data();
@@ -276,6 +276,22 @@
                     </div>
                 `;
                 handDisplay.classList.add('show');
+
+                if (roomData.player1 === playerId) {
+                    await firebaseModules.setDoc(roomRef, { player1Hand: hand }, { merge: true });
+                } else if (roomData.player2 === playerId) {
+                    await firebaseModules.setDoc(roomRef, { player2Hand: hand }, { merge: true });
+                }
+            } catch (error) {
+                console.error("プレイエラー:", error);
+                alert("手の選択に失敗しました。もう一度お試しください。");
+                
+                // エラー時にボタンを再度有効化
+                document.querySelectorAll('#gameButtons button').forEach(btn => {
+                    btn.disabled = false;
+                    btn.classList.remove('hand-selected');
+                });
+            }
 
             try {
                 const roomRef = firebaseModules.doc(db, "rooms", roomId);
@@ -332,7 +348,7 @@
             let result = "";
             let resultClass = "";
 
-            showVsDisplay(roomData.player1Hand, roomData.player2Hand);
+            showVsDisplay(roomData.player1Hand, roomData.player2Hand, roomData);
 
             if (roomData.player1Hand === roomData.player2Hand) {
                 result = "👔 引き分け！";
@@ -381,6 +397,13 @@
         // Firebase初期化
         async function initializeFirebase() {
             try {
+                // ページ読み込み完了を待つ
+                if (document.readyState !== 'complete') {
+                    await new Promise(resolve => {
+                        window.addEventListener('load', resolve);
+                    });
+                }
+
                 const [{ initializeApp }, firestoreModule] = await Promise.all([
                     import("https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"),
                     import("https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js")
@@ -404,8 +427,11 @@
             }
         }
 
-        // 初期化を実行
-        initializeFirebase();
+        // DOMContentLoadedイベントで初期化を開始
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM読み込み完了、初期化開始");
+            initializeFirebase();
+        });
     </script>
 </body>
 </html>
