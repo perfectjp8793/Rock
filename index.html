@@ -52,25 +52,16 @@
     <h2 id="result"></h2>
 
     <script type="module">
-        // Firebase初期化状態を管理
-        let isFirebaseInitialized = false;
+        let db;
+        let roomId = null;
+        let unsubscribe = null;
+        let firebaseModules = null;
 
-        // Firebase SDKのロードを待つ
-        async function loadFirebase() {
-            try {
-                const [{ initializeApp }, { getFirestore, collection, addDoc, doc, setDoc, getDoc, onSnapshot }] = await Promise.all([
-                    import("https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"),
-                    import("https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js")
-                ]);
-                return { initializeApp, getFirestore, collection, addDoc, doc, setDoc, getDoc, onSnapshot };
-            } catch (error) {
-                console.error("Firebase SDKのロードに失敗:", error);
-                throw error;
-            }
+        function generateShortId() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
         }
 
-        // Firebase関連の変数
-        let db;
+        let playerId = generateShortId();
 
         const firebaseConfig = {
             apiKey: "AIzaSyDz7bUkG8_thmFr4Alot_FXyxl8dex0B18",
@@ -81,57 +72,30 @@
             appId: "1:573769462418:web:4ad6efd0fac2af48deec4b"
         };
 
-        // Firebaseの初期化
-        async function initializeFirebase() {
-            try {
-                const firebase = await loadFirebase();
-                const app = firebase.initializeApp(firebaseConfig);
-                db = firebase.getFirestore(app);
-                isFirebaseInitialized = true;
-                
-                // ボタンのイベントリスナーを設定
-                setupEventListeners(firebase);
-                
-                console.log("Firebase初期化成功");
-            } catch (error) {
-                console.error("Firebase初期化エラー:", error);
-                alert("アプリケーションの初期化に失敗しました。ページを再読み込みしてください。");
-            }
-        }
-
-        // 初期化を実行
-        initializeFirebase();
-
-        let roomId = null;
-        // 4桁の数字でIDを生成
-function generateShortId() {
-    return Math.floor(1000 + Math.random() * 9000).toString();
-}
-
-let playerId = generateShortId();
-        let unsubscribe = null;
-
         async function createRoom() {
+            if (!db || !firebaseModules) {
+                alert("システムの準備中です。少々お待ちください。");
+                return;
+            }
+
             try {
-                // 短いルームIDを生成
                 const newRoomId = generateShortId();
-                const roomRef = doc(db, "rooms", newRoomId);
+                const roomRef = firebaseModules.doc(db, "rooms", newRoomId);
                 
-                // ルームが既に存在しないか確認
-                const roomSnap = await getDoc(roomRef);
+                const roomSnap = await firebaseModules.getDoc(roomRef);
                 if (roomSnap.exists()) {
                     throw new Error("ルームIDが重複しています。もう一度お試しください。");
                 }
                 
-                // ルームを作成
-                await setDoc(roomRef, {
+                await firebaseModules.setDoc(roomRef, {
                     player1: playerId,
                     player2: null,
                     player1Hand: null,
                     player2Hand: null,
                     createdAt: new Date().toISOString()
                 });
-                roomId = roomRef.id;
+
+                roomId = newRoomId;
                 document.getElementById('roomInfo').innerText = `ルームID: ${roomId}`;
                 document.getElementById('gameButtons').classList.add('active');
                 subscribeToRoom(roomId);
@@ -143,17 +107,22 @@ let playerId = generateShortId();
         }
 
         async function joinRoom() {
+            if (!db || !firebaseModules) {
+                alert("システムの準備中です。少々お待ちください。");
+                return;
+            }
+
             try {
                 const inputId = prompt("参加するルームIDを入力してください:");
                 if (!inputId) return;
 
-                const roomRef = doc(db, "rooms", inputId);
-                const roomSnap = await getDoc(roomRef);
+                const roomRef = firebaseModules.doc(db, "rooms", inputId);
+                const roomSnap = await firebaseModules.getDoc(roomRef);
 
                 if (roomSnap.exists()) {
                     const roomData = roomSnap.data();
                     if (!roomData.player2) {
-                        await setDoc(roomRef, { player2: playerId }, { merge: true });
+                        await firebaseModules.setDoc(roomRef, { player2: playerId }, { merge: true });
                         roomId = inputId;
                         document.getElementById('roomInfo').innerText = `ルームID: ${roomId}`;
                         document.getElementById('gameButtons').classList.add('active');
@@ -172,14 +141,15 @@ let playerId = generateShortId();
         }
 
         function subscribeToRoom(roomId) {
+            if (!db || !firebaseModules) return;
+            
             if (unsubscribe) {
                 unsubscribe();
             }
             
-            unsubscribe = onSnapshot(doc(db, "rooms", roomId), (doc) => {
+            unsubscribe = firebaseModules.onSnapshot(firebaseModules.doc(db, "rooms", roomId), (doc) => {
                 if (doc.exists()) {
-                    const roomData = doc.data();
-                    checkResult(roomData);
+                    checkResult(doc.data());
                 }
             });
         }
@@ -190,15 +160,20 @@ let playerId = generateShortId();
                 return;
             }
 
+            if (!db || !firebaseModules) {
+                alert("システムの準備中です。少々お待ちください。");
+                return;
+            }
+
             try {
-                const roomRef = doc(db, "rooms", roomId);
-                const roomSnap = await getDoc(roomRef);
+                const roomRef = firebaseModules.doc(db, "rooms", roomId);
+                const roomSnap = await firebaseModules.getDoc(roomRef);
                 const roomData = roomSnap.data();
 
                 if (roomData.player1 === playerId) {
-                    await setDoc(roomRef, { player1Hand: hand }, { merge: true });
+                    await firebaseModules.setDoc(roomRef, { player1Hand: hand }, { merge: true });
                 } else if (roomData.player2 === playerId) {
-                    await setDoc(roomRef, { player2Hand: hand }, { merge: true });
+                    await firebaseModules.setDoc(roomRef, { player2Hand: hand }, { merge: true });
                 }
             } catch (error) {
                 console.error("プレイエラー:", error);
@@ -224,39 +199,45 @@ let playerId = generateShortId();
 
             document.getElementById("result").innerText = result;
 
-            // 結果表示後、手をリセット
             setTimeout(async () => {
                 try {
-                    const roomRef = doc(db, "rooms", roomId);
-                    await setDoc(roomRef, { player1Hand: null, player2Hand: null }, { merge: true });
+                    if (!db || !firebaseModules) return;
+                    const roomRef = firebaseModules.doc(db, "rooms", roomId);
+                    await firebaseModules.setDoc(roomRef, { player1Hand: null, player2Hand: null }, { merge: true });
                 } catch (error) {
                     console.error("リセットエラー:", error);
                 }
             }, 2000);
         }
 
-        // イベントリスナーの設定
-        function setupEventListeners(firebase) {
-            document.getElementById("createRoomBtn").addEventListener("click", async () => {
-                if (!isFirebaseInitialized) {
-                    alert("アプリケーションの初期化中です。しばらくお待ちください。");
-                    return;
-                }
-                await createRoom(firebase);
-            });
-            
-            document.getElementById("joinRoomBtn").addEventListener("click", async () => {
-                if (!isFirebaseInitialized) {
-                    alert("アプリケーションの初期化中です。しばらくお待ちください。");
-                    return;
-                }
-                await joinRoom(firebase);
-            });
-            
-            document.getElementById("rockBtn").addEventListener("click", () => playGame('グー'));
-            document.getElementById("scissorsBtn").addEventListener("click", () => playGame('チョキ'));
-            document.getElementById("paperBtn").addEventListener("click", () => playGame('パー'));
+        // Firebase初期化
+        async function initializeFirebase() {
+            try {
+                const [{ initializeApp }, firestoreModule] = await Promise.all([
+                    import("https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"),
+                    import("https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js")
+                ]);
+
+                const app = initializeApp(firebaseConfig);
+                db = firestoreModule.getFirestore(app);
+                firebaseModules = firestoreModule;
+
+                // イベントリスナーの設定
+                document.getElementById("createRoomBtn").addEventListener("click", createRoom);
+                document.getElementById("joinRoomBtn").addEventListener("click", joinRoom);
+                document.getElementById("rockBtn").addEventListener("click", () => playGame('グー'));
+                document.getElementById("scissorsBtn").addEventListener("click", () => playGame('チョキ'));
+                document.getElementById("paperBtn").addEventListener("click", () => playGame('パー'));
+
+                console.log("Firebase初期化成功");
+            } catch (error) {
+                console.error("Firebase初期化エラー:", error);
+                alert("アプリケーションの初期化に失敗しました。ページを再読み込みしてください。");
+            }
         }
+
+        // 初期化を実行
+        initializeFirebase();
     </script>
 </body>
 </html>
