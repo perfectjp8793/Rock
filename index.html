@@ -260,6 +260,28 @@
                 const roomSnap = await firebaseModules.getDoc(roomRef);
                 const roomData = roomSnap.data();
 
+                // プレイヤーの手を表示
+                const handDisplay = document.getElementById('vsDisplay');
+                handDisplay.innerHTML = `
+                    <div class="player-hand me">
+                        <div class="player-label">自分の手</div>
+                        <span class="hand-emoji">${getHandEmoji(hand)}</span>
+                        <div>${hand}</div>
+                    </div>
+                    <span style="color: #ff5722; font-weight: bold;">VS</span>
+                    <div class="player-hand opponent">
+                        <div class="player-label">相手の手</div>
+                        <span class="hand-emoji">❔</span>
+                        <div>待機中...</div>
+                    </div>
+                `;
+                handDisplay.classList.add('show');
+
+            try {
+                const roomRef = firebaseModules.doc(db, "rooms", roomId);
+                const roomSnap = await firebaseModules.getDoc(roomRef);
+                const roomData = roomSnap.data();
+
                 if (roomData.player1 === playerId) {
                     await firebaseModules.setDoc(roomRef, { player1Hand: hand }, { merge: true });
                 } else if (roomData.player2 === playerId) {
@@ -280,9 +302,9 @@
             }
         }
 
-        function showVsDisplay(player1Hand, player2Hand) {
+        function showVsDisplay(player1Hand, player2Hand, currentRoomData) {
             const vsDisplay = document.getElementById('vsDisplay');
-            const isPlayer1 = playerId === roomData.player1;
+            const isPlayer1 = playerId === currentRoomData.player1;
             
             const myHand = isPlayer1 ? player1Hand : player2Hand;
             const opponentHand = isPlayer1 ? player2Hand : player1Hand;
