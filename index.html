@@ -3,113 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ジャンケン対戦</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
-            background-color: #f5f5f5;
-        }
-        button {
-            margin: 5px;
-            padding: 8px 16px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        .player-area {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            background-color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        #result {
-            font-size: 24px;
-            color: #2c3e50;
-            margin: 20px 0;
-            padding: 10px;
-            background-color: #e8f5e9;
-            border-radius: 4px;
-        }
-        @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            50% { transform: translateX(10px); }
-            75% { transform: translateX(-10px); }
-            100% { transform: translateX(0); }
-        }
-        .shaking {
-            animation: shake 0.5s ease-in-out;
-        }
-    </style>
+    <title>オンラインジャンケン</title>
 </head>
 <body>
-    <h1>ジャンケン対戦</h1>
-    <h2>ジャンケンを選ぼう！</h2>
-    <div class="player-area">
-        <h3>あなたの手</h3>
-        <button onclick="playGame('グー')">グー</button>
-        <button onclick="playGame('チョキ')">チョキ</button>
-        <button onclick="playGame('パー')">パー</button>
-        <p id="player-choice"></p>
-    </div>
-    <div class="player-area">
-        <h3>コンピューターの手</h3>
-        <p id="computer-choice">？？？</p>
-    </div>
+    <h1>オンラインジャンケン</h1>
+
+    <button onclick="createRoom()">ルームを作る</button>
+    <button onclick="joinRoom()">ルームに参加</button>
+
+    <h2>あなたの手を選ぶ</h2>
+    <button onclick="playGame('グー')">グー</button>
+    <button onclick="playGame('チョキ')">チョキ</button>
+    <button onclick="playGame('パー')">パー</button>
+
     <h2 id="result"></h2>
-    <button onclick="restartGame()" style="display:none;">もう一回！</button>
 
-    <script>
-        function playGame(playerChoice) {
-            document.getElementById("player-choice").innerText = `あなた: ${playerChoice}`;
-            let computerChoiceElement = document.getElementById("computer-choice");
-            computerChoiceElement.innerText = "考え中...";
-            computerChoiceElement.classList.add("shaking");
-            
-            setTimeout(() => {
-                const choices = ["グー", "チョキ", "パー"];
-                const computerChoice = choices[Math.floor(Math.random() * 3)];
-                computerChoiceElement.innerText = `コンピューター: ${computerChoice}`;
-                computerChoiceElement.classList.remove("shaking");
-                judgeGame(playerChoice, computerChoice);
-            }, 1500); // 1.5秒後にコンピューターの手を表示
+    <script type="module">
+        // **Firebaseを読み込む**
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        // **🔥 Firebaseの設定（ここに自分の情報を入れる）**
+        const firebaseConfig = {
+            apiKey: "AIzaSyDz7bUkG8_thmFr4Alot_FXyxl8dex0B18",
+            authDomain: "jankenonline-270a1.firebaseapp.com",
+            projectId: "jankenonline-270a1",
+            storageBucket: "jankenonline-270a1.firebasestorage.app",
+            messagingSenderId: "573769462418",
+            appId: "1:573769462418:web:4ad6efd0fac2af48deec4b"
+        };
+
+        // **Firebaseを初期化**
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // **変数**
+        let roomId = null;
+        let playerId = Math.random().toString(36).substring(2, 10); // ランダムなID
+
+        // **ルームを作る**
+        async function createRoom() {
+            const roomRef = await addDoc(collection(db, "rooms"), {
+                player1: playerId,
+                player2: null,
+                player1Hand: null,
+                player2Hand: null
+            });
+            roomId = roomRef.id;
+            alert(`ルーム作成！ID: ${roomId}`);
         }
 
-        function judgeGame(playerChoice, computerChoice) {
-            let result;
-            if (playerChoice === computerChoice) {
-                result = "引き分け！";
-            } else if (
-                (playerChoice === "グー" && computerChoice === "チョキ") ||
-                (playerChoice === "チョキ" && computerChoice === "パー") ||
-                (playerChoice === "パー" && computerChoice === "グー")
-            ) {
-                result = "あなたの勝ち！";
+        // **ルームに参加する**
+        async function joinRoom() {
+            const inputId = prompt("参加するルームIDを入力:");
+            const roomRef = doc(db, "rooms", inputId);
+            const roomSnap = await getDoc(roomRef);
+
+            if (roomSnap.exists()) {
+                const roomData = roomSnap.data();
+                if (!roomData.player2) {
+                    await setDoc(roomRef, { player2: playerId }, { merge: true });
+                    roomId = inputId;
+                    alert("ルームに参加しました！");
+                } else {
+                    alert("満員です！");
+                }
             } else {
-                result = "コンピューターの勝ち！";
+                alert("ルームが見つかりません！");
             }
-            document.getElementById("result").innerText = result;
-            document.querySelector("button[onclick='restartGame()']").style.display = "block";
         }
 
-        function restartGame() {
-            document.getElementById("player-choice").innerText = "";
-            document.getElementById("computer-choice").innerText = "？？？";
-            document.getElementById("result").innerText = "";
-            document.querySelector("button[onclick='restartGame()']").style.display = "none";
+        // **ジャンケンの手を出す**
+        async function playGame(hand) {
+            if (!roomId) {
+                alert("ルームに入っていません！");
+                return;
+            }
+
+            const roomRef = doc(db, "rooms", roomId);
+            const roomSnap = await getDoc(roomRef);
+            const roomData = roomSnap.data();
+
+            if (roomData.player1 === playerId) {
+                await setDoc(roomRef, { player1Hand: hand }, { merge: true });
+            } else if (roomData.player2 === playerId) {
+                await setDoc(roomRef, { player2Hand: hand }, { merge: true });
+            }
+
+            checkResult();
+        }
+
+        // **勝敗判定**
+        async function checkResult() {
+            const roomRef = doc(db, "rooms", roomId);
+            const roomSnap = await getDoc(roomRef);
+            const roomData = roomSnap.data();
+
+            if (roomData.player1Hand && roomData.player2Hand) {
+                let result = "";
+                if (roomData.player1Hand === roomData.player2Hand) {
+                    result = "引き分け！";
+                } else if (
+                    (roomData.player1Hand === "グー" && roomData.player2Hand === "チョキ") ||
+                    (roomData.player1Hand === "チョキ" && roomData.player2Hand === "パー") ||
+                    (roomData.player1Hand === "パー" && roomData.player2Hand === "グー")
+                ) {
+                    result = roomData.player1 === playerId ? "あなたの勝ち！" : "相手の勝ち！";
+                } else {
+                    result = roomData.player2 === playerId ? "あなたの勝ち！" : "相手の勝ち！";
+                }
+
+                document.getElementById("result").innerText = result;
+
+                // **リセット**
+                await setDoc(roomRef, { player1Hand: null, player2Hand: null }, { merge: true });
+            }
+        }
+
+        // **リアルタイムで相手の手を監視**
+        function watchGame() {
+            if (!roomId) return;
+
+            const roomRef = doc(db, "rooms", roomId);
+            onSnapshot(roomRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    checkResult();
+                }
+            });
         }
     </script>
 </body>
